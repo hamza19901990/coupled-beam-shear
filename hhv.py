@@ -55,8 +55,8 @@ def get_input_features():
     Angle = st.sidebar.slider('Angle (degrees)', 0.00, 40.60, 15.17)
     
     data_user = {
-        'L_n': L_n,
-        'b_w': b_w,
+        'Ln': Ln,
+        'bw': bw,
         'h': h,
         'fc': fc,
         'Ast': Ast,
@@ -66,7 +66,7 @@ def get_input_features():
         'Av': Av,
         'fyv': fyv,
         'Avd': Avd,
-        'Fyd': Fyd,
+        'fyd': Fyd,
         'Angle': Angle
     }
     
