@@ -1,79 +1,99 @@
-import numpy as np  # linear algebra
-import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
+import numpy as np
+import pandas as pd
 import streamlit as st
 from PIL import Image
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingRegressor
 import pickle
+from sklearn.preprocessing import StandardScaler
 
+# App Title and Description
 st.write("""
-# Fiber Reinforced Polymer Flat Slab Shear
-This app predicts the **Ultimate Shear Capacity of Fiber Reinforced Polymer Flat Slab Shear**!
+# Shear Capacity Prediction of Coupled Beams
+This app predicts the **Shear Capacity of Coupled Beams** using various parameters!
 """)
 st.write('---')
 
-image = Image.open(r'soil.jpg')
+# Image for context (replace with your own image)
+image = Image.open(r'coupled_beam.jpg')
 st.image(image, use_column_width=True)
-
-data = pd.read_csv(r"finalequtionsmars.csv")
-req_col_names = ["A_cm2", "bo_mm", "bo_1_5_mm", "de", "fc_Mpa", "p_percent", "Er_Gpa", "Vu_kN"]
+# Load your dataset
+data = pd.read_csv(r"coupled_beams.csv")  # Your dataset should contain the variables you listed
+req_col_names = ["Ln", "bw", "h", "fc", "Ast", "fyt", "Ah", "fyh", "Av", "fyv", "Avd", "fyd", "Angle", "Vn"]
 curr_col_names = list(data.columns)
 
+# Rename columns to match required names
 mapper = {}
 for i, name in enumerate(curr_col_names):
     mapper[name] = req_col_names[i]
 
 data = data.rename(columns=mapper)
+
+# Data Information
 st.subheader('Data Information')
 st.write(data.head())
 st.write(data.isna().sum())
 corr = data.corr()
 st.write(corr)
 
-X = data.iloc[:, :-1]  # Features - All columns but last
-y = data.iloc[:, -1]  # Target - Last Column
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Initialize and train the GradientBoostingRegressor
-model = GradientBoostingRegressor(learning_rate=0.5, n_estimators=100)
-model.fit(X_train, y_train)
-
+# Sidebar for input parameters
 st.sidebar.header('Specify Input Parameters')
+
 def get_input_features():
-    A_cm2 = st.sidebar.slider('A_cm2', 6.25, 1587.50, 671.10)
-    bo_mm = st.sidebar.slider('bo_mm', 280.00, 2470.00, 1496.90)
-    bo_1_5_mm = st.sidebar.slider('bo_1_5_mm', 640.00, 4608.00, 2509.18)
-    de = st.sidebar.slider('de', 36.00, 284.00, 127.89)
-    fc_Mpa = st.sidebar.slider('fc_Mpa', 22.16, 179.00, 44.72)
-    p_percent = st.sidebar.slider('p_percent', 0.13, 3.76, 0.94)
-    Er_Gpa = st.sidebar.slider('Er_Gpa', 28.40, 230.00, 74.44)
+    Ln = st.sidebar.slider('L_n (mm)', 500.00, 1219.00, 823.37)
+    bw = st.sidebar.slider('b_w (mm)', 120.00, 350.00, 221.11)
+    h = st.sidebar.slider('h (mm)', 300.00, 991.00, 523.73)
+    fc = st.sidebar.slider('fc (MPa)', 26.00, 85.00, 43.61)
+    Ast = st.sidebar.slider('Ast (mm²)', 57.00, 2644.00, 518.99)
+    fyt = st.sidebar.slider('fyt (MPa)', 276.00, 709.00, 458.36)
+    Ah = st.sidebar.slider('Ah (mm²)', 0.00, 1058.00, 238.74)
+    fyh = st.sidebar.slider('fyh (MPa)', 0.00, 614.00, 344.54)
+    Av = st.sidebar.slider('Av (mm²)', 226.00, 5418.00, 1324.87)
+    fyv = st.sidebar.slider('fyv (MPa)', 281.00, 953.00, 507.96)
+    Avd = st.sidebar.slider('Avd (mm²)', 0.00, 2580.00, 829.36)
+    fyd = st.sidebar.slider('Fyd (MPa)', 0.00, 883.00, 352.90)
+    Angle = st.sidebar.slider('Angle (degrees)', 0.00, 40.60, 15.17)
     
     data_user = {
-        'A_cm2': A_cm2,
-        'bo_mm': bo_mm,
-        'bo_1_5_mm': bo_1_5_mm,
-        'de': de,
-        'fc_Mpa': fc_Mpa,
-        'p_percent': p_percent,
-        'Er_Gpa': Er_Gpa
+        'L_n': L_n,
+        'b_w': b_w,
+        'h': h,
+        'fc': fc,
+        'Ast': Ast,
+        'fyt': fyt,
+        'Ah': Ah,
+        'fyh': fyh,
+        'Av': Av,
+        'fyv': fyv,
+        'Avd': Avd,
+        'Fyd': Fyd,
+        'Angle': Angle
     }
     
     features = pd.DataFrame(data_user, index=[0])
     return features
 
+# Get input from the user
 df = get_input_features()
 
-# Main Panel
-st.header('Specified Input Parameters')
-st.write(df)
+# Standardize the input data
+scaler = StandardScaler()
+scaler.fit(data[req_col_names[:-1]])  # Exclude the target column 'Shear_Capacity'
+df_standardized = scaler.transform(df)
+
+# Convert standardized data back to DataFrame
+df_standardized = pd.DataFrame(df_standardized, columns=df.columns)
+
+# Display the standardized input parameters
+st.header('Specified Input Parameters (Standardized)')
+st.write(df_standardized)
 st.write('---')
 
-# Reads in saved classification model
-load_clf = pickle.load(open('new.pkl', 'rb'))
+# Load your pre-trained model (make sure to have your model saved as a .pkl file)
+load_clf = pickle.load(open('svr.pkl', 'rb'))
 
-st.header('Prediction of Vu (kN)')
-# Apply model to make predictions
-prediction = load_clf.predict(df)
+# Predict the shear capacity based on input
+st.header('Predicted Shear Capacity (kN)')
+prediction = load_clf.predict(df_standardized)
 st.write(prediction)
-st.write('---') 
+st.write('---')
